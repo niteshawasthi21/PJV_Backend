@@ -70,6 +70,47 @@ npm start
 
 The server will start on `http://localhost:3000` (or the port specified in your `.env` file).
 
+## 🔄 Git Workflow
+
+This project follows a feature branch workflow:
+
+### Branch Structure
+- **`main`** - Production-ready code
+- **`development`** - Integration branch for features
+- **`feature/description`** - New features
+- **`bugfix/description`** - Bug fixes
+
+### Development Workflow
+1. **Create a feature branch** from development:
+   ```bash
+   git checkout development
+   git checkout -b feature/new-feature-name
+   ```
+
+2. **Make your changes** and commit:
+   ```bash
+   git add .
+   git commit -m "feat: add new feature description"
+   ```
+
+3. **Push and create Pull Request**:
+   ```bash
+   git push origin feature/new-feature-name
+   ```
+
+4. **Merge to development** after review and testing
+
+5. **Deploy to main** when ready for production
+
+### Commit Message Format
+```
+feat: add user registration endpoint
+fix: resolve database connection timeout
+docs: update API documentation
+refactor: improve error handling in auth controller
+test: add unit tests for user model
+```
+
 ## 📋 Available Endpoints
 
 ### Base Endpoints
