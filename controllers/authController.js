@@ -1,5 +1,6 @@
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
+const crypto = require('crypto'); // Add at the top if not present
 
 /**
  * Authentication Controller
@@ -87,6 +88,161 @@ class AuthController {
       });
     }
   }
+
+  
+  /**
+   * Login a user
+   * Handles user authentication
+   */
+  static async login(req, res) {
+    try {
+      const { email, password } = req.body;
+
+      // 1. Validate input
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email and password are required'
+        });
+      }
+
+      // 2. Find user by email
+      const user = await User.findByEmail(email.toLowerCase().trim());
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid email or password'
+        });
+      }
+
+      // 3. Compare password
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid email or password'
+        });
+      }
+
+      // 4. Success response (without password)
+      res.status(200).json({
+        success: true,
+        message: 'Login successful',
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          created_at: user.created_at
+        }
+      });
+
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error during login',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+      });
+    }
+  }
+
+
+
+/**
+ * Forgot Password
+ * Handles password reset requests by generating a reset token
+ */
+static async forgotPassword(req, res) {
+  try {
+    const { email } = req.body;
+
+    // 1. Validate email
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    // 2. Check if user exists
+    const user = await User.findByEmail(email.toLowerCase().trim());
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'No account found with that email'
+      });
+    }
+
+    // 3. Generate a reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    await User.saveResetToken(user.id, resetToken);
+
+    // 4. Respond with the token (for local development)
+    res.status(200).json({
+      success: true,
+      message: 'Password reset token generated (for local development)',
+      resetToken
+    });
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error during password reset',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+    });
+  }
+}
+
+
+  /**
+ * Reset Password
+ * Allows user to set a new password using a valid reset token
+ */
+static async resetPassword(req, res) {
+  try {
+    const { token, newPassword } = req.body;
+
+    // 1. Validate input
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token and new password are required'
+      });
+    }
+
+    // 2. Find user by reset token
+    const user = await User.findByResetToken(token);
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset token'
+      });
+    }
+
+    // 3. Hash new password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // 4. Update user's password and clear reset token
+    await User.updatePassword(user.id, hashedPassword);
+    await User.clearResetToken(user.id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password has been reset successfully'
+    });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error during password reset',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+    });
+  }
+}
+
 }
 
 module.exports = AuthController;

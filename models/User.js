@@ -73,6 +73,29 @@ class User {
       throw error;
     }
   }
+
+  /** Additional methods for password reset functionality */
+
+     static async findByResetToken(token) {
+    const query = 'SELECT * FROM users WHERE reset_token = ?';
+    const [rows] = await promisePool.execute(query, [token]);
+    return rows[0] || null;
+  }
+
+  static async updatePassword(userId, hashedPassword) {
+    const query = 'UPDATE users SET password = ? WHERE id = ?';
+    await promisePool.execute(query, [hashedPassword, userId]);
+  }
+
+  static async clearResetToken(userId) {
+    const query = 'UPDATE users SET reset_token = NULL WHERE id = ?';
+    await promisePool.execute(query, [userId]);
+  }
+
+  static async saveResetToken(userId, token) {
+    const query = 'UPDATE users SET reset_token = ? WHERE id = ?';
+    await promisePool.execute(query, [token, userId]);
+  }
 }
 
 module.exports = User;
