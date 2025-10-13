@@ -1,5 +1,6 @@
 const express = require('express');
 const AuthController = require('../controllers/authController');
+const { authenticateToken } = require('../middleware/auth');
 
 // Create a router instance
 const router = express.Router();
@@ -86,5 +87,32 @@ router.post('/login', AuthController.login);
  */
 router.post('/reset-password', AuthController.resetPassword);
 router.post('/forgot-password', AuthController.forgotPassword);
+
+/**
+ * GET /api/auth/profile
+ * Get the details of the currently logged-in user
+ * Requires authentication token in Authorization header
+ * 
+ * Headers:
+ * Authorization: Bearer <jwt_token>
+ * 
+ * Response:
+ * Success (200): {
+ *   "success": true,
+ *   "message": "User profile retrieved successfully",
+ *   "user": {
+ *     "id": 1,
+ *     "name": "John Doe",
+ *     "email": "john@example.com",
+ *     "created_at": "2024-01-01T00:00:00.000Z"
+ *   }
+ * }
+ * 
+ * Error (401/403/404/500): {
+ *   "success": false,
+ *   "message": "Error description"
+ * }
+ */
+router.get('/profile', authenticateToken, AuthController.getProfile);
 
 module.exports = router;

@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
-const crypto = require('crypto'); // Add at the top if not present
+const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 
 /**
  * Authentication Controller
@@ -124,10 +125,21 @@ class AuthController {
         });
       }
 
-      // 4. Success response (without password)
+      // 4. Generate JWT token
+      const token = jwt.sign(
+        { 
+          id: user.id, 
+          email: user.email 
+        },
+        process.env.JWT_SECRET || 'fallback-secret-key',
+        { expiresIn: '24h' }
+      );
+
+      // 5. Success response (without password)
       res.status(200).json({
         success: true,
         message: 'Login successful',
+        token,
         user: {
           id: user.id,
           name: user.name,
@@ -242,6 +254,46 @@ static async resetPassword(req, res) {
     });
   }
 }
+
+  /**
+   * Get user profile
+   * Returns the details of the currently logged-in user
+   */
+  static async getProfile(req, res) {
+    try {
+      // Get user ID from the authenticated request (set by auth middleware)
+      const userId = req.user.id;
+
+      // Find user by ID
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+
+      // Return user details (without password)
+      res.status(200).json({
+        success: true,
+        message: 'User profile retrieved successfully',
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          created_at: user.created_at
+        }
+      });
+
+    } catch (error) {
+      console.error('Get profile error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error while retrieving profile',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+      });
+    }
+  }
 
 }
 

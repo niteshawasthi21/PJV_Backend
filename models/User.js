@@ -74,6 +74,23 @@ class User {
     }
   }
 
+  /**
+   * Find a user by ID
+   * @param {number} id - User's ID
+   * @returns {Promise<Object|null>} - User data or null if not found
+   */
+  static async findById(id) {
+    try {
+      const query = 'SELECT * FROM users WHERE id = ?';
+      const [rows] = await promisePool.execute(query, [id]);
+      
+      // Return first user found or null
+      return rows.length > 0 ? rows[0] : null;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   /** Additional methods for password reset functionality */
 
      static async findByResetToken(token) {

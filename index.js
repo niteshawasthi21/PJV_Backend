@@ -23,6 +23,8 @@ app.get('/', (req, res) => {
     status: 'Server is running successfully',
     endpoints: {
       register: 'POST /api/auth/register',
+      login: 'POST /api/auth/login',
+      profile: 'GET /api/auth/profile (requires auth)',
       health: 'GET /health'
     },
     timestamp: new Date().toISOString()
