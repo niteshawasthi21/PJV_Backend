@@ -1,5 +1,6 @@
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
+const UserAddress = require('../models/userAddress');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 
@@ -144,6 +145,7 @@ class AuthController {
           id: user.id,
           name: user.name,
           email: user.email,
+          avatar: user.avatar ? `${req.protocol}://${req.get('host')}/uploads/${user.avatar}` : null,
           created_at: user.created_at
         }
       });
@@ -259,42 +261,138 @@ static async resetPassword(req, res) {
    * Get user profile
    * Returns the details of the currently logged-in user
    */
-  static async getProfile(req, res) {
-    try {
-      // Get user ID from the authenticated request (set by auth middleware)
-      const userId = req.user.id;
+ static async getProfile(req, res) {
+  try {
+    const userId = req.user.id;
 
-      // Find user by ID
-      const user = await User.findById(userId);
-      if (!user) {
-        return res.status(404).json({
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const addresses = await UserAddress.findByUserId(userId);
+
+    res.status(200).json({
+      success: true,
+      message: 'User profile retrieved successfully',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        avatarUrl: user.avatar ? `${req.protocol}://${req.get('host')}/uploads/${user.avatar}` : null,
+        createdAt: user.created_at,
+        addresses: addresses || []
+      }
+    });
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while retrieving profile',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+    });
+  }
+}
+
+
+// Upload Avatar
+  static async uploadAvatar(req, res) {
+  try {
+    const userId = req.user.id;  // from auth middleware
+    if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+
+    // Save filename in DB
+    await User.updateAvatar(userId, req.file.filename);
+
+    const avatarUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+
+    res.json({ success: true, message: 'Avatar uploaded', avatarUrl });
+  } catch (error) {
+    console.error('Upload avatar error:', error);
+    res.status(500).json({ success: false, message: 'Upload failed' });
+  }
+}
+
+// Update user profile
+static async updateProfile(req, res) {
+  try {
+    const userId = req.user.id;
+    const { name, email, phone } = req.body;
+
+    // Validate input
+    if (!name || !email || !phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, email, and phone are required'
+      });
+    }
+
+    // Update user profile
+    const result = await User.updateProfile(userId, { name, email, phone });
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully'
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while updating profile',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+    });
+  }
+}
+
+// add or update user address
+static async saveOrUpdateAddress(req, res) {
+    try {
+      const userId = req.user.id;
+      const { id, type, name, phone, addressLine1, addressLine2, city, state, pincode } = req.body;
+
+      // Validate required fields
+      if (!type || !name || !phone || !addressLine1 || !city || !state || !pincode) {
+        return res.status(400).json({
           success: false,
-          message: 'User not found'
+          message: 'All address fields except addressLine2 are required'
         });
       }
 
-      // Return user details (without password)
-      res.status(200).json({
-        success: true,
-        message: 'User profile retrieved successfully',
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          created_at: user.created_at
-        }
-      });
+      if (id) {
+        // Update existing address
+        const result = await UserAddress.update(id, { userId, type, name, phone, addressLine1, addressLine2, city, state, pincode });
 
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ success: false, message: 'Address not found or not owned by user' });
+        }
+
+        res.status(200).json({ success: true, message: 'Address updated successfully' });
+      } else {
+        // Create new address
+        await UserAddress.create({ userId, type, name, phone, addressLine1, addressLine2, city, state, pincode });
+
+        res.status(201).json({ success: true, message: 'Address added successfully' });
+      }
     } catch (error) {
-      console.error('Get profile error:', error);
+      console.error('Save/update address error:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error while retrieving profile',
+        message: 'Internal server error while saving address',
         error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
       });
     }
   }
-
 }
+
 
 module.exports = AuthController;

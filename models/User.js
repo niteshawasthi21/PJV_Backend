@@ -99,20 +99,58 @@ class User {
     return rows[0] || null;
   }
 
+  // Update user's password
   static async updatePassword(userId, hashedPassword) {
     const query = 'UPDATE users SET password = ? WHERE id = ?';
     await promisePool.execute(query, [hashedPassword, userId]);
   }
 
+  // Clear reset token
   static async clearResetToken(userId) {
     const query = 'UPDATE users SET reset_token = NULL WHERE id = ?';
     await promisePool.execute(query, [userId]);
   }
 
+  // Save reset token
   static async saveResetToken(userId, token) {
     const query = 'UPDATE users SET reset_token = ? WHERE id = ?';
     await promisePool.execute(query, [token, userId]);
   }
+
+
+  // Update user's avatar filename
+  static async updateAvatar(userId, filename) {
+  try {
+    const sql = 'UPDATE users SET avatar = ? WHERE id = ?';
+    const [result] = await promisePool.execute(sql, [filename, userId]);
+    return result;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Update user profile information
+static async updateProfile(userId, { name, email, phone }) {
+  const query = `
+    UPDATE users 
+    SET name = ?, email = ?, phone = ? 
+    WHERE id = ?
+  `;
+  const [result] = await promisePool.execute(query, [name, email, phone, userId]);
+  return result;
+}
+
+// add or update users additional fields here
+static async updateAddress(userId, address) {
+  const query = `
+    UPDATE users 
+    SET address = ? 
+    WHERE id = ?
+  `;
+  const [result] = await promisePool.execute(query, [address, userId]);
+  return result;
+}
+
 }
 
 module.exports = User;

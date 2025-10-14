@@ -1,6 +1,7 @@
 const express = require('express');
 const AuthController = require('../controllers/authController');
 const { authenticateToken } = require('../middleware/auth');
+const upload = require('../middleware/uploadProfilePhoto');
 
 // Create a router instance
 const router = express.Router();
@@ -104,7 +105,21 @@ router.post('/forgot-password', AuthController.forgotPassword);
  *     "id": 1,
  *     "name": "John Doe",
  *     "email": "john@example.com",
- *     "created_at": "2024-01-01T00:00:00.000Z"
+ *     "created_at": "2024-01-01T00:00:00.000Z",
+ *     "avatarUrl": "http://<host>/uploads/avatar-1234567890.png",
+ *     "addresses": [
+ *       {
+ *         "id": 1,
+ *         "type": "home",
+ *         "name": "John Doe",
+ *         "phone": "123-456-7890",
+ *         "addressLine1": "123 Main St",
+ *         "addressLine2": "Apt 4B",
+ *         "city": "New York",
+ *         "state": "NY",
+ *         "pincode": "10001"
+ *       }
+ *     ]
  *   }
  * }
  * 
@@ -114,5 +129,54 @@ router.post('/forgot-password', AuthController.forgotPassword);
  * }
  */
 router.get('/profile', authenticateToken, AuthController.getProfile);
+
+/** PUT /api/auth/profile
+ * Update the profile of the currently logged-in user
+ * Requires authentication token in Authorization header
+ * 
+ * Headers:
+ * Authorization: Bearer <jwt_token>
+ * 
+ * Request body can contain any of the following fields to update:
+ * {
+ *   "name": "New Name",
+ *   "email": "newemail@example.com",
+ *   "phone": "123-456-7890"
+ * }
+ */
+router.put('/update-profile', authenticateToken, AuthController.updateProfile);
+
+/** POST /api/auth/avatar
+ * Upload a new profile avatar
+ * Requires authentication token in Authorization header
+ * 
+ * Headers:
+ * Authorization: Bearer <jwt_token>
+ * 
+ * Request body:
+ * - Form-data with file upload
+ */
+router.post('/avatar', authenticateToken, upload.single('avatar'), AuthController.uploadAvatar);
+
+/** POST /api/auth/user-address
+ * Add or update user address
+ * Requires authentication token in Authorization header
+ * 
+ * Headers:
+ * Authorization: Bearer <jwt_token>
+ * 
+ * Request body:
+ * {
+ *   "type": "home", // or "work"   
+ *   "name": "John Doe",
+ *   "phone": "123-456-7890",
+ *   "addressLine1": "123 Main St",
+ *   "addressLine2": "Apt 4B",
+ *   "city": "New York",
+ *   "state": "NY",
+ *   "pincode": "10001"
+ * }
+ */     
+router.post('/user-address', authenticateToken, AuthController.saveOrUpdateAddress);
 
 module.exports = router;

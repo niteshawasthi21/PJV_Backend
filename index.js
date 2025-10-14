@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
 
 // Load environment variables FIRST
 dotenv.config();
@@ -42,6 +43,9 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 404 handler - catch all unmatched routes
 app.use((req, res) => {
